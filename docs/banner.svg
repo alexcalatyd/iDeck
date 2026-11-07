@@ -8,6 +8,10 @@
       <stop offset="0%" stop-color="#8fa3b0" stop-opacity="0.20"/>
       <stop offset="100%" stop-color="#8fa3b0" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="textFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffe2b8"/>
+    </linearGradient>
     <filter id="iconShadow" x="-30%" y="-30%" width="160%" height="170%">
       <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
     </filter>
@@ -22,10 +26,10 @@
     <line x1="0" y1="214" x2="1200" y2="214"/>
   </g>
 
-  <!-- El icono de la app (Sources/iDeck/Web/icon.svg) y su nombre debajo,
-       como en la pantalla de inicio. -->
+  <!-- El icono de la app (Sources/iDeck/Web/icon.svg) a la izquierda y el
+       nombre en grande a la derecha, el conjunto centrado. -->
   <g filter="url(#iconShadow)">
-    <svg x="526" y="62" width="148" height="148" viewBox="0 0 180 180">
+    <svg x="372" y="84" width="152" height="152" viewBox="0 0 180 180">
       <rect width="180" height="180" rx="40" fill="#1A2024"/>
       <rect width="180" height="180" rx="40" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1.5"/>
       <g fill="#3C474E">
@@ -42,8 +46,8 @@
     </svg>
   </g>
 
-  <text x="600" y="250" text-anchor="middle"
-        font-family="-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif"
-        font-size="22" font-weight="500" letter-spacing="0.2"
-        fill="rgba(245,240,232,0.92)">iDeck</text>
+  <text x="564" y="160" dominant-baseline="central"
+        font-family="ui-rounded,'SF Pro Rounded',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif"
+        font-size="124" font-weight="700" letter-spacing="-1.5"
+        fill="url(#textFade)">iDeck</text>
 </svg>
