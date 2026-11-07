@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="iDeck">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+<title>iDeck</title>
+</head>
+<body class="is-booting" data-theme="dark" data-glass="full" data-screen="deck">
+
+<!-- Catalogo de simbolos. Uno solo, dibujado en la misma rejilla de 24 y con
+     el mismo grosor de trazo, para que no se mezclen estilos. Vive aqui
+     porque <use href="otro.svg#id"> da problemas en Safari.
+
+     Regla: los glifos de un control circular van RELLENOS, como los de
+     Centro de Control; los de una lista de ajustes van de TRAZO. Mezclar
+     los dos pesos en la misma rejilla es lo que delata un set prestado. -->
+<svg class="sprite" aria-hidden="true" width="0" height="0" focusable="false">
+  <defs>
+    <!-- Trazo: listas de ajustes y flechas -->
+    <symbol id="i-brush" viewBox="0 0 24 24"><path d="M14.8 3.9 20.1 9.2 10.4 18.9a3 3 0 0 1-1.5.8l-4.3 1 1-4.3a3 3 0 0 1 .8-1.5z M12.6 6.1l5.3 5.3" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 1 0 17.2 8.6 8.6 0 0 1 0-17.2z M3.6 9.8h16.8 M3.6 14.2h16.8 M12 3.4c2.3 2.3 3.5 5.3 3.5 8.6S14.3 18.3 12 20.6 8.5 15.3 8.5 12 9.7 5.7 12 3.4z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 2.9v11.6 M8.1 6.6 12 2.9l3.9 3.7 M8.6 9.6H7.1a2.1 2.1 0 0 0-2.1 2.1v7.3a2.1 2.1 0 0 0 2.1 2.1h9.8a2.1 2.1 0 0 0 2.1-2.1v-7.3a2.1 2.1 0 0 0-2.1-2.1h-1.5" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-add-square" viewBox="0 0 24 24"><path d="M7.1 3.4h9.8a3.7 3.7 0 0 1 3.7 3.7v9.8a3.7 3.7 0 0 1-3.7 3.7H7.1a3.7 3.7 0 0 1-3.7-3.7V7.1a3.7 3.7 0 0 1 3.7-3.7z M12 8.1v7.8 M8.1 12h7.8" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5.5 12.5 4.2 4.2 8.8-9.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-menu-dots" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="5.2" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="18.8" r="1.9"/></g></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4.1 9.5a11.4 11.4 0 0 1 15.8 0 M7.3 13a7 7 0 0 1 9.4 0 M10.5 16.5a2.6 2.6 0 0 1 3 0" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M4.1 9.5a11.4 11.4 0 0 1 8.6-3.2 M10.5 16.5a2.6 2.6 0 0 1 3 0 M4 20 20 4" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock-line" viewBox="0 0 24 24"><path d="M6.6 10.4h10.8a2.1 2.1 0 0 1 2.1 2.1v6.1a2.1 2.1 0 0 1-2.1 2.1H6.6a2.1 2.1 0 0 1-2.1-2.1v-6.1a2.1 2.1 0 0 1 2.1-2.1z M8.3 10.4V7.7a3.7 3.7 0 0 1 7.4 0v2.7" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-tap" viewBox="0 0 24 24"><path d="M12 11.4V5.6a2 2 0 0 1 4 0v7.2 M16 11.6a2 2 0 0 1 4 0v3.2a5.6 5.6 0 0 1-5.6 5.6h-1.6a4.4 4.4 0 0 1-3.6-1.9L5.8 16a1.9 1.9 0 0 1 2.9-2.4L10.4 15" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M11.1 2.6a.95.95 0 0 1 1.8 0l1.25 3.5a.95.95 0 0 0 .58.58l3.5 1.25a.95.95 0 0 1 0 1.8l-3.5 1.25a.95.95 0 0 0-.58.58l-1.25 3.5a.95.95 0 0 1-1.8 0l-1.25-3.5a.95.95 0 0 0-.58-.58l-3.5-1.25a.95.95 0 0 1 0-1.8l3.5-1.25a.95.95 0 0 0 .58-.58zM18.4 15.1a.8.8 0 0 1 1.5 0l.5 1.4a.8.8 0 0 0 .49.49l1.4.5a.8.8 0 0 1 0 1.5l-1.4.5a.8.8 0 0 0-.49.49l-.5 1.4a.8.8 0 0 1-1.5 0l-.5-1.4a.8.8 0 0 0-.49-.49l-1.4-.5a.8.8 0 0 1 0-1.5l1.4-.5a.8.8 0 0 0 .49-.49z" fill="currentColor"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M3.2 7.1h3.9 M13.3 7.1h7.5 M3.2 16.9h7.5 M16.7 16.9h4.1" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round"/><circle cx="10.2" cy="7.1" r="2.6" fill="none" stroke="currentColor" stroke-width="1.85"/><circle cx="13.8" cy="16.9" r="2.6" fill="none" stroke="currentColor" stroke-width="1.85"/></symbol>
+
+    <!-- Relleno: controles circulares y dock -->
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.4 3.6a1.9 1.9 0 0 1 3.2 0l8 13.9a1.9 1.9 0 0 1-1.6 2.9H4a1.9 1.9 0 0 1-1.6-2.9zM12 7.9a1.1 1.1 0 0 0-1.1 1.2l.3 4.3a.8.8 0 0 0 1.6 0l.3-4.3A1.1 1.1 0 0 0 12 7.9zm0 7.4a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z" fill="currentColor"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M19.1 3.2a1 1 0 0 1 1.2 1v10a3 3 0 1 1-2-2.8V6.5l-6.6 1.3v9.6a3 3 0 1 1-2-2.8V6a1 1 0 0 1 .8-1z" fill="currentColor"/></symbol>
+
+    <!-- Apariencia: el medio circulo de `circle.lefthalf.filled`, que es el
+         glifo con el que el sistema marca claro/oscuro. Un aro con la mitad
+         izquierda rellena: lo mismo que el boton de apariencia del Mac.
+
+         La luna se queda en el catalogo pero FUERA del Mando: es el glifo de
+         No molestar, y macOS 26 no deja activar un modo de concentracion
+         desde una app que no sea de Apple (el framework privado contesta con
+         error de permisos y los controles del Centro de Control no tienen
+         identificador con el que agarrarlos). En cuanto haya camino, este es
+         su icono. -->
+    <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.7" fill="none" stroke="currentColor" stroke-width="2.1"/><path d="M12 3.3a8.7 8.7 0 0 0 0 17.4z" fill="currentColor"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.9" fill="currentColor"/><path d="M12 1.5v2.6 M12 19.9v2.6 M4.57 4.57 6.4 6.4 M17.6 17.6l1.83 1.83 M1.5 12h2.6 M19.9 12h2.6 M4.57 19.43 6.4 17.6 M17.6 6.4l1.83-1.83" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.9 15.3a9.3 9.3 0 0 1-12.2-12.2.9.9 0 0 0-1.2-1.1A10.4 10.4 0 1 0 22 16.5a.9.9 0 0 0-1.1-1.2z" fill="currentColor"/></symbol>
+
+    <!-- Altavoz. El de silencio lleva la barra diagonal de SF Symbols
+         (speaker.slash): se lee de un golpe, y mucho antes que una equis
+         suelta al lado del cono. -->
+    <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M12.4 3.3a1.1 1.1 0 0 1 1.1 1.1v15.2a1.1 1.1 0 0 1-1.8.85l-4.8-3.95H4a1.4 1.4 0 0 1-1.4-1.4V8.9A1.4 1.4 0 0 1 4 7.5h2.9l4.8-3.95a1.1 1.1 0 0 1 .7-.25z" fill="currentColor"/><path d="M16.6 9.4l5 5.2 M21.6 9.4l-5 5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M12.4 3.3a1.1 1.1 0 0 1 1.1 1.1v15.2a1.1 1.1 0 0 1-1.8.85l-4.8-3.95H4a1.4 1.4 0 0 1-1.4-1.4V8.9A1.4 1.4 0 0 1 4 7.5h2.9l4.8-3.95a1.1 1.1 0 0 1 .7-.25zM16.3 8.2a1.05 1.05 0 0 1 1.48.06 5.5 5.5 0 0 1 0 7.48 1.05 1.05 0 1 1-1.54-1.42 3.4 3.4 0 0 0 0-4.64 1.05 1.05 0 0 1 .06-1.48zm3.2-3.3a1.05 1.05 0 0 1 1.48.05 10.2 10.2 0 0 1 0 14.1 1.05 1.05 0 1 1-1.53-1.44 8.1 8.1 0 0 0 0-11.22 1.05 1.05 0 0 1 .05-1.49z" fill="currentColor"/></symbol>
+    <symbol id="i-volume-low" viewBox="0 0 24 24"><path d="M12.4 3.3a1.1 1.1 0 0 1 1.1 1.1v15.2a1.1 1.1 0 0 1-1.8.85l-4.8-3.95H4a1.4 1.4 0 0 1-1.4-1.4V8.9A1.4 1.4 0 0 1 4 7.5h2.9l4.8-3.95a1.1 1.1 0 0 1 .7-.25zM16.3 8.2a1.05 1.05 0 0 1 1.48.06 5.5 5.5 0 0 1 0 7.48 1.05 1.05 0 1 1-1.54-1.42 3.4 3.4 0 0 0 0-4.64 1.05 1.05 0 0 1 .06-1.48z" fill="currentColor"/></symbol>
+    <symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M12.4 3.3a1.1 1.1 0 0 1 1.1 1.1v15.2a1.1 1.1 0 0 1-1.8.85l-4.8-3.95H4a1.4 1.4 0 0 1-1.4-1.4V8.9A1.4 1.4 0 0 1 4 7.5h2.9l4.8-3.95a1.1 1.1 0 0 1 .7-.25z" fill="currentColor"/><path d="M21.3 5.2 16.1 18.5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M16.3 8.2a1.05 1.05 0 0 1 1.48.06 5.5 5.5 0 0 1 .72 6.3l-1.63-1.28a3.4 3.4 0 0 0-.63-3.6 1.05 1.05 0 0 1 .06-1.48z" fill="currentColor" opacity="0.55"/></symbol>
+
+    <!-- Brillo: sol con mas o menos rayo, para que el nivel bajo tambien se
+         lea sin numero. -->
+    <symbol id="i-brightness" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.4" fill="currentColor"/><path d="M12 1.4v2.6 M17.66 6.34 19.5 4.5 M20 12h2.6 M17.66 17.66 19.5 19.5 M12 20v2.6 M6.34 17.66 4.5 19.5 M4 12H1.4 M6.34 6.34 4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round"/></symbol>
+    <symbol id="i-brightness-min" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.3" fill="currentColor"/><path d="M12 4.6V3 M17.23 6.77 18.36 5.64 M19.4 12H21 M17.23 17.23l1.13 1.13 M12 19.4V21 M6.77 17.23 5.64 18.36 M4.6 12H3 M6.77 6.77 5.64 5.64" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round"/></symbol>
+
+    <!-- Pantalla y energia -->
+    <symbol id="i-display-off" viewBox="0 0 24 24"><mask id="m-display-off"><rect width="24" height="24" fill="#fff"/><path d="M2.6 21.4 21.4 2.6" stroke="#000" stroke-width="4.4" stroke-linecap="round"/></mask><g mask="url(#m-display-off)"><path d="M3.9 3.6h16.2a1.7 1.7 0 0 1 1.7 1.7v9.4a1.7 1.7 0 0 1-1.7 1.7H3.9a1.7 1.7 0 0 1-1.7-1.7V5.3a1.7 1.7 0 0 1 1.7-1.7zM9.6 18.4h4.8l.5 1.9h1.4a1 1 0 0 1 0 2H7.7a1 1 0 0 1 0-2h1.4z" fill="currentColor"/></g><path d="M3.4 20.6 20.6 3.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+    <symbol id="i-zzz" viewBox="0 0 24 24"><path d="M12.8 3.2h8l-8 8.2h8" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 12.4h5.8l-5.8 6h5.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 19h3.6l-3.6 3.4h3.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M12 1.6a4.9 4.9 0 0 1 4.9 4.9v2.1h.5a2.4 2.4 0 0 1 2.4 2.4v8.6a2.4 2.4 0 0 1-2.4 2.4H6.6a2.4 2.4 0 0 1-2.4-2.4V11a2.4 2.4 0 0 1 2.4-2.4h.5V6.5A4.9 4.9 0 0 1 12 1.6zm0 2.1a2.8 2.8 0 0 0-2.8 2.8v2.1h5.6V6.5A2.8 2.8 0 0 0 12 3.7z" fill="currentColor"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 1.9a1.15 1.15 0 0 1 1.15 1.15v7.6a1.15 1.15 0 0 1-2.3 0v-7.6A1.15 1.15 0 0 1 12 1.9zM6.5 5.1a1.15 1.15 0 0 1 1.3 1.86 6.9 6.9 0 1 0 8.4 0 1.15 1.15 0 1 1 1.4-1.82 9.2 9.2 0 1 1-11.2 0 1.15 1.15 0 0 1 .1-.04z" fill="currentColor"/></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M12 2.6a9.4 9.4 0 0 1 6.8 2.9V3.3a1.1 1.1 0 0 1 2.2 0v5a1.1 1.1 0 0 1-1.1 1.1h-5a1.1 1.1 0 0 1 0-2.2h2.6A7.2 7.2 0 1 0 19.2 12a1.1 1.1 0 0 1 2.2 0A9.4 9.4 0 1 1 12 2.6z" fill="currentColor"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3.4 2.6h4.3a1 1 0 0 1 0 2H4.6v3.1a1 1 0 0 1-2 0V3.6a1 1 0 0 1 1-1zm12.9 0h4.3a1 1 0 0 1 1 1v4.1a1 1 0 0 1-2 0V4.6h-3.3a1 1 0 0 1 0-2zM3.6 15.3a1 1 0 0 1 1 1v3.1h3.1a1 1 0 0 1 0 2H3.4a1 1 0 0 1-1-1v-4.1a1 1 0 0 1 1.2-1zm16.8 0a1 1 0 0 1 1 1v4.1a1 1 0 0 1-1 1h-4.1a1 1 0 0 1 0-2h3.1v-3.1a1 1 0 0 1 1-1z" fill="currentColor"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M10.6 2.9a7.7 7.7 0 0 1 6.07 12.45l4.14 4.14a1.15 1.15 0 0 1-1.63 1.63l-4.14-4.14A7.7 7.7 0 1 1 10.6 2.9zm0 2.3a5.4 5.4 0 1 0 0 10.8 5.4 5.4 0 0 0 0-10.8z" fill="currentColor"/></symbol>
+    <symbol id="i-mission" viewBox="0 0 24 24"><g fill="currentColor"><rect x="2.2" y="7.4" width="10.4" height="7.6" rx="2.1" opacity="0.5"/><rect x="11.4" y="4.2" width="10.4" height="7.6" rx="2.1" opacity="0.72"/><rect x="6.4" y="13.2" width="11.2" height="7.6" rx="2.2"/></g></symbol>
+
+    <!-- Transporte -->
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M10.45 5.8 17.52 10.59a1.7 1.7 0 0 1 0 2.82L10.45 18.2A1.7 1.7 0 0 1 7.8 16.79V7.21A1.7 1.7 0 0 1 10.45 5.8z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.1 3.9h1.6a1.7 1.7 0 0 1 1.7 1.7v12.8a1.7 1.7 0 0 1-1.7 1.7H8.1a1.7 1.7 0 0 1-1.7-1.7V5.6a1.7 1.7 0 0 1 1.7-1.7zm6.2 0h1.6a1.7 1.7 0 0 1 1.7 1.7v12.8a1.7 1.7 0 0 1-1.7 1.7h-1.6a1.7 1.7 0 0 1-1.7-1.7V5.6a1.7 1.7 0 0 1 1.7-1.7z" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M17.48 6.5 10.94 10.74a1.5 1.5 0 0 0 0 2.52L17.48 17.5a1.5 1.5 0 0 0 2.32-1.26V7.76A1.5 1.5 0 0 0 17.48 6.5zM5 4.6h.9a1.5 1.5 0 0 1 1.5 1.5v11.8a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5V6.1A1.5 1.5 0 0 1 5 4.6z" fill="currentColor"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M6.52 6.5 13.06 10.74a1.5 1.5 0 0 1 0 2.52L6.52 17.5A1.5 1.5 0 0 1 4.2 16.24V7.76A1.5 1.5 0 0 1 6.52 6.5zM18.1 4.6h.9a1.5 1.5 0 0 1 1.5 1.5v11.8a1.5 1.5 0 0 1-1.5 1.5h-.9a1.5 1.5 0 0 1-1.5-1.5V6.1a1.5 1.5 0 0 1 1.5-1.5z" fill="currentColor"/></symbol>
+
+    <!-- ±10 s: flecha circular con el numero dentro, como el reproductor de
+         iOS. La cifra va en el propio simbolo para que no se pueda separar
+         del glifo al que pertenece. -->
+    <symbol id="i-back10" viewBox="0 0 24 24">
+      <path d="M12 4.1a7.9 7.9 0 1 1-7.53 10.3 1.1 1.1 0 0 1 2.1-.68A5.7 5.7 0 1 0 12 6.3H9.8l1.5 1.5a1.1 1.1 0 0 1-1.56 1.56L6.6 6.22a1.1 1.1 0 0 1 0-1.56L9.74 1.5A1.1 1.1 0 0 1 11.3 3.07L10.2 4.1z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-fwd10" viewBox="0 0 24 24">
+      <path d="M12 4.1a7.9 7.9 0 1 0 7.53 10.3 1.1 1.1 0 0 0-2.1-.68A5.7 5.7 0 1 1 12 6.3h2.2l-1.5 1.5a1.1 1.1 0 0 0 1.56 1.56l3.14-3.14a1.1 1.1 0 0 0 0-1.56L14.26 1.5A1.1 1.1 0 0 0 12.7 3.07l1.1 1.03z" fill="currentColor"/>
+    </symbol>
+
+    <!-- Dock. Cuatro glifos que se distinguen en 26 px. -->
+    <symbol id="i-controls" viewBox="0 0 24 24"><g fill="currentColor"><rect x="3" y="3.2" width="7.4" height="17.6" rx="3.7" opacity="0.45"/><rect x="13.6" y="3.2" width="7.4" height="17.6" rx="3.7" opacity="0.45"/><circle cx="6.7" cy="8.4" r="2.5"/><circle cx="17.3" cy="15.2" r="2.5"/></g></symbol>
+    <symbol id="i-deck" viewBox="0 0 24 24"><g fill="currentColor"><rect x="3.2" y="3.2" width="7.6" height="7.6" rx="2.3"/><rect x="3.2" y="13.2" width="7.6" height="7.6" rx="2.3"/><rect x="13.2" y="3.2" width="7.6" height="7.6" rx="2.3"/><rect x="13.2" y="13.2" width="7.6" height="7.6" rx="2.3"/></g></symbol>
+    <symbol id="i-waveform" viewBox="0 0 24 24"><path d="M3.1 9.8v4.4 M6.06 7.9v8.2 M9.02 5.5v13 M11.98 7.2v9.6 M14.94 9.3v5.4 M17.9 6.5v11 M20.86 8.7v6.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="currentColor"><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(45 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(90 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(135 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(180 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(225 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(270 12 12)"/><rect x="10.75" y="1" width="2.5" height="5.6" rx="1.25" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="7.15" fill="none" stroke="currentColor" stroke-width="3.3"/></symbol>
+  </defs>
+</svg>
+
+<!-- El fondo. El cristal necesita algo debajo que refractar: sin esto, un
+     panel translucido sobre negro plano es solo un gris. Aqui va la portada
+     de lo que suena, ampliada y desenfocada, y una malla de color que se
+     mueve despacio cuando no hay nada. -->
+<div class="ambience" aria-hidden="true">
+  <div class="ambience-art" id="ambience-art"></div>
+  <div class="ambience-mesh"></div>
+  <div class="ambience-veil"></div>
+</div>
+
+<div class="app">
+
+  <!-- Barra de estado: reloj, titulo de la pantalla y estado del enlace. -->
+  <header class="chrome">
+    <span class="chrome-clock" id="clock">--:--</span>
+    <div class="chrome-center">
+      <!-- "+" a la izquierda del titulo y "−" a la derecha, en Mando y Apps.
+           Pequenos y pegados al titulo: no ocupan un hueco de la cuadricula.
+           Mientras se quita, los sustituyen Cancelar y Listo. -->
+      <button class="chrome-side chrome-add" id="chrome-add" type="button" data-t-aria="add.label">
+        <svg aria-hidden="true"><use href="#i-plus"/></svg>
+      </button>
+      <button class="chrome-word chrome-cancel" id="chrome-cancel" type="button" data-t="edit.cancel">Cancelar</button>
+      <h1 class="chrome-title" id="chrome-title" data-t="screen.deck">Mando</h1>
+      <button class="chrome-side chrome-remove" id="chrome-remove" type="button" data-t-aria="edit.label">
+        <svg aria-hidden="true"><use href="#i-minus"/></svg>
+      </button>
+      <button class="chrome-word chrome-done" id="chrome-done" type="button" data-t="edit.done">Listo</button>
+    </div>
+    <button class="chrome-link" id="link" type="button" aria-live="polite">
+      <span class="chrome-link-text" id="link-text">Conectando</span>
+      <svg class="chrome-link-icon" aria-hidden="true"><use href="#i-wifi"/></svg>
+    </button>
+  </header>
+
+  <main class="screens" id="screens">
+
+    <!-- Cada panel es una CUADRICULA de celdas cuadradas. Las celdas que no
+         caben no se recortan ni se scrollean: pasan a la pagina siguiente,
+         que es un hermano aparte y entero. Mientras miras una pagina, las
+         demas no estan dibujadas, asi que no asoma nada de la de al lado.
+
+         Las paginas las monta `app.js`: mide el hueco, saca cuantas columnas
+         y filas caben de verdad y reparte las piezas. Ver `Grid`. -->
+
+    <!-- Mando. Al estilo de Centro de Control: los dos niveles en pastillas
+         de una columna y dos filas, y los circulos rellenando el resto de la
+         cuadricula. Ni las apps ni lo que suena viven aqui: cada uno tiene su
+         propia pantalla, y una tira que lo unico que hacia era llevarte a
+         otra pantalla no es un mando, es un enlace ocupando sitio. -->
+    <section class="screen is-active" data-screen="deck" data-t-aria="screen.deck">
+      <div class="view"><div class="pages" id="deck"></div></div>
+    </section>
+
+    <!-- Apps. Pantalla propia y nada mas: iconos reales del Mac, en la misma
+         cuadricula que el Mando. -->
+    <section class="screen" data-screen="apps" data-t-aria="screen.apps">
+      <div class="view"><div class="pages" id="apps"></div></div>
+    </section>
+
+    <!-- Ahora suena. Una sola pagina siempre: la portada se encoge con la
+         altura disponible para que quepa con el transporte. -->
+    <section class="screen" data-screen="player" data-t-aria="screen.player">
+      <div class="view"><div class="pages"><div class="page page--flow is-current">
+        <div class="player">
+        <div class="player-main">
+        <div class="player-art" id="player-art">
+          <!-- La misma imagen detras, ampliada y desenfocada: rellena lo que
+               le sobra al cuadrado cuando la portada es apaisada, para que
+               el dibujo de delante pueda entrar entero sin recortarse. -->
+          <img class="player-art-back" id="player-art-back" alt="" aria-hidden="true" draggable="false">
+          <img class="player-art-img" id="player-art-img" alt="" draggable="false">
+          <!-- Sin portada no se deja el hueco en negro: la inicial de lo que
+               suena sobre el color del ambiente, que al menos cambia con el
+               contenido. -->
+          <div class="player-art-empty">
+            <span class="player-art-initial" id="player-art-initial"></span>
+            <svg class="player-art-glyph" aria-hidden="true"><use href="#i-music"/></svg>
+          </div>
+        </div>
+
+        <div class="player-meta">
+          <p class="player-source" id="player-source" data-t="player.idle">En espera</p>
+          <h2 class="player-title" id="player-title" data-t="player.nothing">Nada suena</h2>
+          <p class="player-artist" id="player-artist" data-t="player.hint">Pon algo en el Mac</p>
+        </div>
+
+        <!-- La barra se arrastra. Antes solo se pintaba, y de ahi venia que
+             no hubiera forma de adelantar el contenido. -->
+        <div class="player-progress" id="player-progress" hidden>
+          <div class="scrub" id="scrub" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" data-t-aria="player.scrub">
+            <div class="scrub-track"><div class="scrub-fill" id="scrub-fill"></div></div>
+          </div>
+          <div class="progress-times">
+            <span id="progress-elapsed">0:00</span>
+            <span id="progress-left">-0:00</span>
+          </div>
+        </div>
+
+        <!-- Los cinco botones existen siempre; se ensena la pareja que
+             corresponde al tipo de reproductor. Un video de un navegador
+             lleva ±10 s, una cancion anterior/siguiente. -->
+        <div class="player-keys" id="player-keys" role="group" data-t-aria="player.transport">
+          <button class="key key-seek" type="button" data-action="media.seek" data-value="-10" data-t-aria="player.back10">
+            <svg aria-hidden="true"><use href="#i-back10"/></svg>
+          </button>
+          <button class="key key-skip" type="button" data-action="media.previous" data-t-aria="player.prev">
+            <svg aria-hidden="true"><use href="#i-prev"/></svg>
+          </button>
+          <button class="key key-main" type="button" data-action="media.playpause" id="playpause" data-t-aria="player.play">
+            <svg class="key-glyph is-play" aria-hidden="true"><use href="#i-play"/></svg>
+            <svg class="key-glyph is-pause" aria-hidden="true"><use href="#i-pause"/></svg>
+          </button>
+          <button class="key key-skip" type="button" data-action="media.next" data-t-aria="player.next">
+            <svg aria-hidden="true"><use href="#i-next"/></svg>
+          </button>
+          <button class="key key-seek" type="button" data-action="media.seek" data-value="10" data-t-aria="player.fwd10">
+            <svg aria-hidden="true"><use href="#i-fwd10"/></svg>
+          </button>
+        </div>
+        </div>
+
+        <!-- El volumen, en vertical y pegado al borde derecho: es el unico
+             nivel que se toca mientras suena algo, y en horizontal la mano
+             derecha ya esta ahi. -->
+        <div class="player-volume" id="player-volume"></div>
+        </div>
+      </div></div></div>
+    </section>
+
+    <!-- Ajustes: solo lo que tiene sentido tocar desde el movil. El resto
+         vive en la ventana de ajustes del Mac. Aqui las piezas no son celdas
+         sino grupos de filas, asi que la pagina corta entre grupos. -->
+    <section class="screen" data-screen="settings" data-t-aria="screen.settings">
+      <div class="view"><div class="pages" id="settings"></div></div>
+    </section>
+
+  </main>
+
+  <!-- Dock. Solo iconos: una etiqueta debajo de un glifo de 26 px no anade
+       nada y rompe la proporcion. Abajo en el movil, columna entera a la
+       izquierda en pantalla ancha. -->
+  <nav class="dock glass" id="dock" data-t-aria="screen.deck">
+    <button class="tab is-active" type="button" data-screen="deck" aria-current="page" data-t-aria="screen.deck">
+      <svg aria-hidden="true"><use href="#i-controls"/></svg>
+    </button>
+    <button class="tab" type="button" data-screen="apps" data-t-aria="screen.apps">
+      <svg aria-hidden="true"><use href="#i-deck"/></svg>
+    </button>
+    <button class="tab" type="button" data-screen="player" data-t-aria="screen.player">
+      <svg aria-hidden="true"><use href="#i-waveform"/></svg>
+    </button>
+    <button class="tab" type="button" data-screen="settings" data-t-aria="screen.settings">
+      <svg aria-hidden="true"><use href="#i-gear"/></svg>
+    </button>
+  </nav>
+</div>
+
+<!-- Invitacion a la pantalla de inicio. Sale UNA vez, y solo si el panel se
+     abre en una pestana: en el navegador no hay forma de quitar las barras,
+     desde el icono si. -->
+<div class="sheet-host install-host" id="install-host" hidden>
+  <div class="sheet-scrim"></div>
+  <div class="sheet install glass" role="dialog" aria-modal="true" aria-labelledby="install-title">
+    <div class="install-head">
+      <img class="install-icon" src="icon.svg" alt="">
+      <h2 class="sheet-title" id="install-title" data-t="install.title">Ponlo en la pantalla de inicio</h2>
+      <p class="sheet-body" data-t="install.body">Así se abre a pantalla completa, sin barras del navegador.</p>
+    </div>
+    <ol class="install-steps">
+      <li><span class="install-glyph"><svg aria-hidden="true"><use href="#i-share"/></svg></span><span id="install-step-1" data-t="install.step1.ios">Pulsa Compartir</span></li>
+      <li><span class="install-glyph"><svg aria-hidden="true"><use href="#i-add-square"/></svg></span><span id="install-step-2" data-t="install.step2.ios">Elige «Añadir a pantalla de inicio»</span></li>
+      <li><span class="install-glyph"><img src="icon.svg" alt=""></span><span data-t="install.step3">Ábrelo desde el icono</span></li>
+    </ol>
+    <div class="sheet-actions install-actions">
+      <button class="sheet-button" type="button" id="install-dismiss" data-t="install.dismiss">Seguir en el navegador</button>
+    </div>
+  </div>
+</div>
+
+<!-- Selector del "+": apps del Mac o mandos que faltan. Una cuadricula
+     paginada como los paneles: nada scrollea, tampoco aqui. -->
+<div class="sheet-host picker-host" id="picker-host" hidden>
+  <div class="sheet-scrim" id="picker-scrim"></div>
+  <div class="sheet picker glass" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+    <div class="picker-head">
+      <h2 class="sheet-title" id="picker-title"></h2>
+      <button class="picker-done" type="button" id="picker-done" data-t="add.done">Listo</button>
+    </div>
+    <div class="picker-body" id="picker-body"></div>
+    <div class="picker-dots" id="picker-dots" aria-hidden="true"></div>
+  </div>
+</div>
+
+<!-- Hoja de confirmacion, al estilo de las alertas de iOS. -->
+<div class="sheet-host" id="sheet-host" hidden>
+  <div class="sheet-scrim" id="sheet-scrim"></div>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-icon" id="sheet-icon"><svg aria-hidden="true"><use href="#i-warning"/></svg></div>
+    <h2 class="sheet-title" id="sheet-title"></h2>
+    <p class="sheet-body" id="sheet-body"></p>
+    <div class="sheet-actions">
+      <button class="sheet-button" type="button" id="sheet-confirm" data-t="sheet.ok">Continuar</button>
+      <button class="sheet-button" type="button" id="sheet-cancel" data-t="sheet.cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
