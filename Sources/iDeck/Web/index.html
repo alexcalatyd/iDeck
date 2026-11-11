@@ -39,9 +39,12 @@
     <symbol id="i-lock-line" viewBox="0 0 24 24"><path d="M6.6 10.4h10.8a2.1 2.1 0 0 1 2.1 2.1v6.1a2.1 2.1 0 0 1-2.1 2.1H6.6a2.1 2.1 0 0 1-2.1-2.1v-6.1a2.1 2.1 0 0 1 2.1-2.1z M8.3 10.4V7.7a3.7 3.7 0 0 1 7.4 0v2.7" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-tap" viewBox="0 0 24 24"><path d="M12 11.4V5.6a2 2 0 0 1 4 0v7.2 M16 11.6a2 2 0 0 1 4 0v3.2a5.6 5.6 0 0 1-5.6 5.6h-1.6a4.4 4.4 0 0 1-3.6-1.9L5.8 16a1.9 1.9 0 0 1 2.9-2.4L10.4 15" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="M11.1 2.6a.95.95 0 0 1 1.8 0l1.25 3.5a.95.95 0 0 0 .58.58l3.5 1.25a.95.95 0 0 1 0 1.8l-3.5 1.25a.95.95 0 0 0-.58.58l-1.25 3.5a.95.95 0 0 1-1.8 0l-1.25-3.5a.95.95 0 0 0-.58-.58l-3.5-1.25a.95.95 0 0 1 0-1.8l3.5-1.25a.95.95 0 0 0 .58-.58zM18.4 15.1a.8.8 0 0 1 1.5 0l.5 1.4a.8.8 0 0 0 .49.49l1.4.5a.8.8 0 0 1 0 1.5l-1.4.5a.8.8 0 0 0-.49.49l-.5 1.4a.8.8 0 0 1-1.5 0l-.5-1.4a.8.8 0 0 0-.49-.49l-1.4-.5a.8.8 0 0 1 0-1.5l1.4-.5a.8.8 0 0 0 .49-.49z" fill="currentColor"/></symbol>
+    <symbol id="i-search-line" viewBox="0 0 24 24"><path d="M10.7 4.2a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13z M15.5 15.5l4.6 4.6" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M3.2 7.1h3.9 M13.3 7.1h7.5 M3.2 16.9h7.5 M16.7 16.9h4.1" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round"/><circle cx="10.2" cy="7.1" r="2.6" fill="none" stroke="currentColor" stroke-width="1.85"/><circle cx="13.8" cy="16.9" r="2.6" fill="none" stroke="currentColor" stroke-width="1.85"/></symbol>
 
     <!-- Relleno: controles circulares y dock -->
+    <!-- `xmark.circle.fill`: el borrar de un campo de busqueda de iOS. -->
+    <symbol id="i-clear" viewBox="0 0 24 24"><path d="M12 2.6a9.4 9.4 0 1 1 0 18.8 9.4 9.4 0 0 1 0-18.8zm-2.9 5.3a.85.85 0 0 0-1.2 1.2L10.8 12l-2.9 2.9a.85.85 0 1 0 1.2 1.2l2.9-2.9 2.9 2.9a.85.85 0 0 0 1.2-1.2L13.2 12l2.9-2.9a.85.85 0 0 0-1.2-1.2L12 10.8z" fill="currentColor"/></symbol>
     <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.4 3.6a1.9 1.9 0 0 1 3.2 0l8 13.9a1.9 1.9 0 0 1-1.6 2.9H4a1.9 1.9 0 0 1-1.6-2.9zM12 7.9a1.1 1.1 0 0 0-1.1 1.2l.3 4.3a.8.8 0 0 0 1.6 0l.3-4.3A1.1 1.1 0 0 0 12 7.9zm0 7.4a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z" fill="currentColor"/></symbol>
     <symbol id="i-music" viewBox="0 0 24 24"><path d="M19.1 3.2a1 1 0 0 1 1.2 1v10a3 3 0 1 1-2-2.8V6.5l-6.6 1.3v9.6a3 3 0 1 1-2-2.8V6a1 1 0 0 1 .8-1z" fill="currentColor"/></symbol>
 
@@ -249,6 +252,10 @@
        nada y rompe la proporcion. Abajo en el movil, columna entera a la
        izquierda en pantalla ancha. -->
   <nav class="dock glass" id="dock" data-t-aria="screen.deck">
+    <!-- La lente: UNA pieza que se desliza de pestana en pestana y se estira
+         al moverse, como la del Liquid Glass de iOS 26. Antes cada pestana
+         encendia su propio fondo y el cambio era un parpadeo en dos sitios. -->
+    <span class="dock-lens" id="dock-lens" aria-hidden="true"></span>
     <button class="tab is-active" type="button" data-screen="deck" aria-current="page" data-t-aria="screen.deck">
       <svg aria-hidden="true"><use href="#i-controls"/></svg>
     </button>
@@ -262,6 +269,14 @@
       <svg aria-hidden="true"><use href="#i-gear"/></svg>
     </button>
   </nav>
+</div>
+
+<!-- La isla: el acuse de lo que pasa en el Mac y no se ve desde el movil
+     (se ha bloqueado, se abre una app, se ha ido la conexion). Una sola a la
+     vez: la nueva sustituye a la anterior. -->
+<div class="island glass" id="island" role="status" aria-live="polite" hidden>
+  <span class="island-art" id="island-art" aria-hidden="true"></span>
+  <span class="island-text" id="island-text"></span>
 </div>
 
 <!-- Invitacion a la pantalla de inicio. Sale UNA vez, y solo si el panel se
@@ -290,11 +305,20 @@
      paginada como los paneles: nada scrollea, tampoco aqui. -->
 <div class="sheet-host picker-host" id="picker-host" hidden>
   <div class="sheet-scrim" id="picker-scrim"></div>
-  <div class="sheet picker glass" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+  <div class="sheet picker glass" role="dialog" aria-modal="true" aria-labelledby="picker-title" id="picker">
+    <!-- El asa: la hoja se cierra arrastrandola hacia abajo, como en iOS. -->
+    <div class="sheet-grabber" aria-hidden="true"></div>
     <div class="picker-head">
       <h2 class="sheet-title" id="picker-title"></h2>
       <button class="picker-done" type="button" id="picker-done" data-t="add.done">Listo</button>
     </div>
+    <!-- Buscar: con todas las apps del Mac, paginar sin filtrar obliga a
+         pasar paginas hasta dar con la que se quiere. -->
+    <label class="search" id="picker-search-box" hidden>
+      <svg class="search-glyph" aria-hidden="true"><use href="#i-search-line"/></svg>
+      <input class="search-input" id="picker-search" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false" data-t-place="add.search">
+      <button class="search-clear" id="picker-clear" type="button" data-t-aria="add.clear"><svg aria-hidden="true"><use href="#i-clear"/></svg></button>
+    </label>
     <div class="picker-body" id="picker-body"></div>
     <div class="picker-dots" id="picker-dots" aria-hidden="true"></div>
   </div>

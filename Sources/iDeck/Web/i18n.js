@@ -100,6 +100,21 @@ const DICT = {
     'add.deck.none': 'Ya están todos los mandos.',
     'add.done': 'Listo',
     'add.shortcuts': 'Atajos',
+    'add.search': 'Buscar',
+    'add.clear': 'Borrar la búsqueda',
+    'add.apps.nomatch': 'Ninguna app se llama así.',
+
+    /* --- La isla: acuses de lo que pasa en el Mac --- */
+    'island.opening': 'Abriendo',
+    'island.lock': 'Mac bloqueado',
+    'island.display': 'Pantalla apagada',
+    'island.sleep': 'El Mac se va a dormir',
+    'island.restart': 'Reiniciando el Mac',
+    'island.shutdown': 'Apagando el Mac',
+    'island.screenshot': 'Elige la zona en el Mac',
+    'island.access': 'Falta el permiso de Accesibilidad',
+    'island.offline': 'Se ha perdido el Mac',
+    'island.back': 'Conectado de nuevo',
     'edit.label': 'Quitar',
     'edit.apps.title': 'Quitar apps',
     'edit.apps.body': 'Selecciona las que quieras retirar del panel. Cuando le des a Listo, se quitarán.',
@@ -214,6 +229,20 @@ const DICT = {
     'add.deck.none': 'Every control is already here.',
     'add.done': 'Done',
     'add.shortcuts': 'Shortcuts',
+    'add.search': 'Search',
+    'add.clear': 'Clear search',
+    'add.apps.nomatch': 'No app by that name.',
+
+    'island.opening': 'Opening',
+    'island.lock': 'Mac locked',
+    'island.display': 'Display off',
+    'island.sleep': 'The Mac is going to sleep',
+    'island.restart': 'Restarting the Mac',
+    'island.shutdown': 'Shutting down the Mac',
+    'island.screenshot': 'Pick the area on the Mac',
+    'island.access': 'Accessibility permission missing',
+    'island.offline': 'Lost the Mac',
+    'island.back': 'Connected again',
     'edit.label': 'Remove',
     'edit.apps.title': 'Remove apps',
     'edit.apps.body': 'Select the ones you want off the panel. They go away when you tap Done.',
@@ -300,6 +329,10 @@ const L = {
     }
     for (const node of (root || document).querySelectorAll('[data-t-aria]')) {
       node.setAttribute('aria-label', this.t(node.dataset.tAria));
+    }
+    for (const node of (root || document).querySelectorAll('[data-t-place]')) {
+      node.setAttribute('placeholder', this.t(node.dataset.tPlace));
+      node.setAttribute('aria-label', this.t(node.dataset.tPlace));
     }
   },
 };

@@ -62,6 +62,8 @@ function url(path) {
   return path + (path.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(token);
 }
 
+/** Devuelve si el Mac acepto la accion: la isla solo confirma lo que ha
+    pasado de verdad. */
 async function send(id, value) {
   try {
     const response = await fetch(url('/api/action'), {
@@ -69,10 +71,12 @@ async function send(id, value) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(value === undefined ? { id } : { id, value }),
     });
-    if (!response.ok) return offline(response.status);
+    if (!response.ok) { offline(response.status); return false; }
     render(await response.json());
+    return true;
   } catch {
     offline();
+    return false;
   }
 }
 
@@ -103,11 +107,87 @@ function connect() {
   };
 }
 
+/* Perder el Mac se dice en la isla, pero con calma: al volver del segundo
+   plano iOS tarda un instante en recuperar la red y la primera peticion
+   falla casi siempre. Solo si sigue caido pasado un momento se avisa, y solo
+   si se aviso se celebra la vuelta. */
+const Link = { lostTimer: null, warned: false };
+
 function offline(status) {
+  const wasLive = body.classList.contains('is-live');
   body.classList.remove('is-live', 'is-booting');
   body.classList.add('is-stale');
   renderLink(t(status === 401 ? 'link.expired' : 'link.offline'), false);
+  if (!wasLive || Link.lostTimer || Link.warned) return;
+  Link.lostTimer = setTimeout(() => {
+    Link.lostTimer = null;
+    if (!body.classList.contains('is-stale')) return;
+    Link.warned = true;
+    Island.show({ text: t(status === 401 ? 'link.expired' : 'island.offline'), icon: 'wifi-off', tone: 'warn', ms: 3200 });
+  }, 1600);
 }
+
+function backOnline() {
+  if (Link.lostTimer) { clearTimeout(Link.lostTimer); Link.lostTimer = null; }
+  if (!Link.warned) return;
+  Link.warned = false;
+  Island.show({ text: t('island.back'), icon: 'wifi', tone: 'good' });
+}
+
+/* --- Isla ---------------------------------------------------------------
+   El acuse de lo que pasa en el Mac y no se ve desde el movil: bloquearlo,
+   apagar la pantalla, abrir una app, perder la conexion. Una a la vez, como
+   las notificaciones con limite de Mantine: la nueva cambia el contenido de
+   la que ya esta abierta en vez de apilarse. `role="status"` la lee
+   VoiceOver sin robar el foco. */
+
+const Island = {
+  timer: null,
+  hideTimer: null,
+
+  show(options) {
+    const node = $('island');
+    const art = $('island-art');
+    const open = !node.hidden && node.classList.contains('is-on');
+
+    art.textContent = '';
+    art.className = 'island-art';
+    if (options.image) {
+      const img = new Image();
+      img.alt = '';
+      img.draggable = false;
+      img.onerror = () => img.remove();
+      img.src = options.image;
+      art.append(img);
+      art.classList.add('is-app');
+    } else if (options.icon) {
+      art.innerHTML = '<svg aria-hidden="true"><use href="#i-' + options.icon + '"/></svg>';
+    }
+    $('island-text').textContent = options.text;
+    node.classList.toggle('is-warn', options.tone === 'warn');
+    node.classList.toggle('is-good', options.tone === 'good');
+
+    clearTimeout(this.timer);
+    clearTimeout(this.hideTimer);
+    node.hidden = false;
+    if (open) {
+      node.classList.remove('is-swapping');
+      void node.offsetWidth;
+      node.classList.add('is-swapping');
+    } else {
+      // Un fotograma en su forma recogida, o el muelle no tiene de donde salir.
+      void node.offsetWidth;
+      requestAnimationFrame(() => node.classList.add('is-on'));
+    }
+    this.timer = setTimeout(() => this.hide(), options.ms || 2200);
+  },
+
+  hide() {
+    const node = $('island');
+    node.classList.remove('is-on', 'is-swapping');
+    this.hideTimer = setTimeout(() => { node.hidden = true; }, 320);
+  },
+};
 
 /* El nombre del servidor no es una traduccion y no puede llevar `data-t`:
    `L.paint` lo pisaba con "Conectando" cada vez que se repintaba el
@@ -257,9 +337,16 @@ function release(node) {
   setTimeout(() => node.classList.remove('is-press'), wait);
 }
 
+/** Interruptores y segmentados que el dedo tiene cogidos. No usan
+    `is-press`, que los encogeria: su forma de decir "te tengo" es otra (el
+    pomo se ensancha, la pieza elegida se encoge). */
+const held = new Set();
+
 document.addEventListener('pointerdown', (event) => {
   const node = event.target.closest(PRESSABLE + ', .switch, .segment-option, .slider, .scrub');
   if (!node || node.disabled || node.classList.contains('is-disabled')) return;
+  const grip = event.target.closest('.switch, .segment-option');
+  if (grip) { grip.classList.add('is-held'); held.add(grip); }
   // Sincrono y dentro del gesto: es lo que hace que el motor responda.
   Haptics.tap(9);
   const pressable = event.target.closest(PRESSABLE);
@@ -268,10 +355,16 @@ document.addEventListener('pointerdown', (event) => {
 
 for (const name of ['pointerup', 'pointercancel', 'pointerleave']) {
   document.addEventListener(name, (event) => {
-    const node = event.target.closest(PRESSABLE);
+    // `pointerleave` del propio documento (el puntero sale de la ventana)
+    // llega con `document` de objetivo, que no tiene `closest`.
+    const node = event.target.closest ? event.target.closest(PRESSABLE) : null;
     if (node && pressed.has(node)) release(node);
     // Deslizar fuera del boton tambien tiene que soltarlo.
     if (name === 'pointerup') for (const other of [...pressed.keys()]) release(other);
+    if (name !== 'pointerleave') {
+      for (const grip of held) grip.classList.remove('is-held');
+      held.clear();
+    }
   }, { passive: true });
 }
 
@@ -314,6 +407,40 @@ class Reconcile {
     }
     return false;
   }
+}
+
+/* --- Estiron elastico --------------------------------------------------
+   Pasarse del final de un nivel no deja el dedo en el vacio: la pastilla se
+   estira hacia el dedo, cada vez menos cuanto mas se tira, y vuelve con
+   muelle al soltar. Es lo que hacen los sliders de Centro de Control, y
+   dice "ya esta al maximo" sin numero ni texto.
+
+   `over` son los pixeles que el dedo se ha salido. Devuelve lo que crece el
+   eje largo (como mucho un 9 %) y lo que adelgaza el corto. */
+function rubber(over) {
+  const grow = 1 + 0.09 * (1 - Math.exp(-over / 90));
+  return { grow, thin: 1 - (grow - 1) * 0.35 };
+}
+
+/** Aplica el estiron a `node` a lo largo de `axis`. `edge` es el lado del que
+    tira el dedo ('start' arriba o a la izquierda, 'end' abajo o a la derecha)
+    y la pieza crece desde el lado contrario. */
+function stretch(node, axis, over, edge) {
+  clearTimeout(node.relaxTimer);
+  if (!over) { node.style.scale = ''; return; }
+  const { grow, thin } = rubber(over);
+  const anchor = edge === 'start' ? (axis === 'v' ? 'bottom' : 'right') : (axis === 'v' ? 'top' : 'left');
+  node.style.transformOrigin = axis === 'v' ? 'center ' + anchor : anchor + ' center';
+  node.style.scale = axis === 'v' ? thin + ' ' + grow : grow + ' ' + thin;
+}
+
+/** Suelta el estiron. El origen se queda hasta que acaba el muelle de vuelta,
+    o la pieza saltaria de sitio a medio camino. */
+function relax(node) {
+  if (!node.style.scale) return;
+  node.style.scale = '';
+  clearTimeout(node.relaxTimer);
+  node.relaxTimer = setTimeout(() => { node.style.transformOrigin = ''; }, 560);
 }
 
 /* --- Slider ------------------------------------------------------------
@@ -359,6 +486,10 @@ class Slider {
     node.addEventListener('pointerdown', (event) => {
       this.armed = { x: event.clientX, y: event.clientY };
       this.detent = null;
+      // La caja en reposo: durante el arrastre la pastilla crece (y se estira
+      // al pasarse), y medir contra la caja crecida haria que el valor y el
+      // estiron se persiguieran el uno al otro.
+      this.rest = node.getBoundingClientRect();
       // Si el navegador se niega, el arrastre sigue funcionando por los
       // eventos normales; lo que no puede es romper el gesto entero.
       try { node.setPointerCapture(event.pointerId); } catch { /* sin captura */ }
@@ -370,6 +501,7 @@ class Slider {
         && Math.hypot(event.clientX - this.armed.x, event.clientY - this.armed.y) > 3) {
         this.dragging = true;
         node.classList.add('is-dragging');
+        node.classList.remove('is-holding');
       }
       if (this.dragging) this.track(event);
     });
@@ -377,6 +509,8 @@ class Slider {
     node.addEventListener('pointerup', (event) => {
       if (this.armed && !this.dragging) this.track(event);
       this.armed = null;
+      this.rest = null;
+      relax(node);
       if (!this.dragging) { this.flush(); return; }
       this.dragging = false;
       node.classList.remove('is-dragging');
@@ -386,14 +520,21 @@ class Slider {
 
     node.addEventListener('pointercancel', () => {
       this.armed = null;
+      this.rest = null;
+      relax(node);
       if (!this.dragging) return;
       this.dragging = false;
       node.classList.remove('is-dragging');
       this.flush();
     });
 
+    // El teclado de un slider de verdad (el de React Aria): flechas de 5 en 5,
+    // paginas de 20 en 20, e Inicio y Fin a los extremos.
     node.addEventListener('keydown', (event) => {
-      const step = { ArrowLeft: -5, ArrowDown: -5, ArrowRight: 5, ArrowUp: 5 }[event.key];
+      const step = {
+        ArrowLeft: -5, ArrowDown: -5, ArrowRight: 5, ArrowUp: 5,
+        PageDown: -20, PageUp: 20, Home: -100, End: 100,
+      }[event.key];
       if (step === undefined) return;
       event.preventDefault();
       Haptics.tap(9);
@@ -407,6 +548,8 @@ class Slider {
       quieto se convierte en "mover este mando". */
   disarm() {
     this.armed = null;
+    this.rest = null;
+    relax(this.node);
     if (this.dragging) {
       this.dragging = false;
       this.node.classList.remove('is-dragging');
@@ -414,7 +557,7 @@ class Slider {
   }
 
   positionValue(event) {
-    const box = this.node.getBoundingClientRect();
+    const box = this.rest || this.node.getBoundingClientRect();
     const ratio = this.axis === 'v'
       ? (box.bottom - event.clientY) / box.height
       : (event.clientX - box.left) / box.width;
@@ -430,6 +573,20 @@ class Slider {
       Haptics.tap(5);
     }
     this.commit(next);
+    if (this.dragging) this.overshoot(event);
+  }
+
+  /** Cuanto se ha salido el dedo de la pastilla, y por donde. */
+  overshoot(event) {
+    const box = this.rest || this.node.getBoundingClientRect();
+    let over = 0;
+    let edge = null;
+    if (this.axis === 'v') {
+      if (event.clientY < box.top) { over = box.top - event.clientY; edge = 'start'; }
+      else if (event.clientY > box.bottom) { over = event.clientY - box.bottom; edge = 'end'; }
+    } else if (event.clientX < box.left) { over = box.left - event.clientX; edge = 'start'; }
+    else if (event.clientX > box.right) { over = event.clientX - box.right; edge = 'end'; }
+    stretch(this.node, this.axis, over, edge);
   }
 
   commit(next) {
@@ -480,6 +637,7 @@ class Scrub {
   constructor(node) {
     this.node = node;
     this.fill = $('scrub-fill');
+    this.track$ = node.querySelector('.scrub-track');
     this.duration = 0;
     this.value = 0;
     this.dragging = false;
@@ -501,6 +659,7 @@ class Scrub {
     for (const name of ['pointerup', 'pointercancel']) {
       node.addEventListener(name, () => {
         if (!this.dragging) return;
+        relax(this.track$);
         this.dragging = false;
         node.classList.remove('is-dragging');
         Haptics.tap(11);
@@ -523,6 +682,10 @@ class Scrub {
     const ratio = Math.max(0, Math.min(1, (event.clientX - box.left) / box.width));
     this.value = ratio * this.duration;
     this.paint();
+    // La pista tambien se estira al pasarse, como la de iOS.
+    const left = box.left - event.clientX;
+    const right = event.clientX - box.right;
+    stretch(this.track$, 'h', Math.max(0, left, right), left > 0 ? 'start' : 'end');
   }
 
   /** Lo que llega del Mac, o la interpolacion local entre avisos. */
@@ -770,6 +933,7 @@ function render(next) {
   if (!next || !Object.keys(next).length) return;
   state = next;
 
+  backOnline();
   body.classList.add('is-live');
   body.classList.remove('is-stale', 'is-booting');
   renderLink(location.hostname, true);
@@ -878,6 +1042,8 @@ function renderTabs() {
     tab.hidden = hidden;
     if (hidden && body.dataset.screen === name) show('deck');
   }
+  // Una pestana que aparece o desaparece mueve a las demas.
+  Dock.place(Dock.active(), false);
 }
 
 /** Que tipo de transporte toca. Un video de un navegador se mueve por
@@ -887,8 +1053,25 @@ function transportMode(track) {
   return track.kind === 'browser' && track.canSeek ? 'seek' : 'skip';
 }
 
+/** Vuelve a lanzar la animacion `name` sobre `node` aunque ya la tuviera. */
+function replay(node, name, ms) {
+  if (!node) return;
+  node.classList.remove(name);
+  void node.offsetWidth;
+  node.classList.add(name);
+  clearTimeout(node.replayTimer);
+  node.replayTimer = setTimeout(() => node.classList.remove(name), ms || 700);
+}
+
+/** Que suena, en una cadena: si cambia, es otra pista. */
+let trackKey = null;
+
 function renderMedia() {
   const track = state.track;
+  const key = track ? [track.source, track.title, track.artist].join('|') : '';
+  // El primer pintado no es un cambio: el panel acaba de abrirse.
+  if (trackKey !== null && key !== trackKey) replay(document.querySelector('.player-meta'), 'is-swapping');
+  trackKey = key;
   const player = document.querySelector('.player');
   // `accepts` limpia el pendiente cuando el Mac confirma o se agota la
   // espera; hasta entonces manda lo que dijimos nosotros.
@@ -949,6 +1132,7 @@ function renderArt(track) {
       const probe = new Image();
       probe.onload = () => {
         if (!state.track || state.track.art !== track.art) return;
+        replay(art, 'is-swapping', 760);
         img.setAttribute('src', track.art);
         back.setAttribute('src', track.art);
         art.classList.add('has-art');
@@ -1071,7 +1255,16 @@ function renderAmbience() {
 function savePrefs(patch) {
   // Optimista: la apariencia tiene que cambiar en el dedo, no en el viaje.
   state.ui = Object.assign({}, state.ui, patch);
-  applyPreferences(state.ui);
+  // Tema y material cambian el panel entero: con View Transitions el nuevo
+  // entra fundido sobre el viejo (la idea del Theme Toggler de Magic UI, sin
+  // su circulo, que no es de Apple). Sin ellas, el corte de `reskin`.
+  const look = 'theme' in patch || 'glass' in patch;
+  const calm = body.dataset.anim === 'off' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (look && !calm && typeof document.startViewTransition === 'function') {
+    document.startViewTransition(() => applyPreferences(state.ui));
+  } else {
+    applyPreferences(state.ui);
+  }
   send('prefs.set', patch);
 }
 
@@ -1186,23 +1379,32 @@ function segmentControl(options, selected, onChange) {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       if (option.value === selected) return;
+      // La pieza viaja ya, en el dedo; los Ajustes se rehacen despues con la
+      // respuesta del Mac y la encuentran donde tiene que estar.
+      selected = option.value;
+      place();
       onChange(option.value);
     });
     node.append(button);
     return button;
   });
 
-  const place = () => {
+  const place = (instant) => {
     const index = Math.max(0, options.findIndex((option) => option.value === selected));
     buttons.forEach((button, i) => button.classList.toggle('is-on', i === index));
     const target = buttons[index];
     if (!target || !target.offsetWidth) return;
+    // La primera vez se pone en su sitio sin viajar: antes, cada vez que los
+    // Ajustes se rehacian, todas las piezas entraban deslizandose desde la
+    // izquierda, como si alguien acabara de elegirlas.
+    if (instant) thumb.style.transition = 'none';
     thumb.style.width = target.offsetWidth + 'px';
     thumb.style.transform = 'translateX(' + (target.offsetLeft - 2) + 'px)';
+    if (instant) { void thumb.offsetWidth; thumb.style.transition = ''; }
   };
   // El indicador necesita medidas reales, que no existen hasta estar en el DOM.
-  requestAnimationFrame(place);
-  node.reposition = place;
+  requestAnimationFrame(() => place(true));
+  node.reposition = () => place(true);
   return node;
 }
 
@@ -1374,7 +1576,22 @@ function restoreDeckItem(entry) {
   send('prefs.set', patch);
 }
 
+/** Para buscar sin que importen tildes ni mayusculas: "musica" encuentra
+    "Música". */
+function fold(text) {
+  return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/** La marca de anadido, en linea y no por `<use>`: el trazo se dibuja con
+    `stroke-dashoffset`, y eso hay que animarlo sobre el propio `<path>`. */
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5.5 12.5 4.2 4.2 8.8-9.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/** La celda del selector: icono y nombre debajo. */
+const PICK = { w: 76, h: 94, gap: 8 };
+
 const Picker = {
+  /** Todas las piezas que se pueden elegir, y las que pasan el filtro. */
+  all: [],
   tiles: [],
   page: 0,
   token: 0,
@@ -1382,6 +1599,12 @@ const Picker = {
   async open(mode) {
     const ticket = ++this.token;
     this.mode = mode;
+    this.all = [];
+    $('picker-search').value = '';
+    $('picker-search-box').classList.remove('has-text');
+    // Buscar solo tiene sentido con las apps del Mac, que pueden ser cien.
+    // Los mandos que faltan caben siempre en una mirada.
+    $('picker-search-box').hidden = mode !== 'apps';
     $('picker-title').textContent = t(mode === 'apps' ? 'add.apps.title' : 'add.deck.title');
     $('picker-host').hidden = false;
     requestAnimationFrame(() => body.classList.add('is-picking'));
@@ -1395,7 +1618,10 @@ const Picker = {
       return;
     }
 
-    this.note('add.apps.loading');
+    // Mientras el Mac busca, la cuadricula ya esta en su sitio con piezas en
+    // gris (el Skeleton de shadcn y Mantine): la hoja no cambia de tamano al
+    // llegar las apps.
+    this.skeleton();
     let catalog = [];
     try {
       const response = await fetch(url('/api/catalog'));
@@ -1408,8 +1634,20 @@ const Picker = {
 
   close() {
     this.token += 1;
+    $('picker-search').blur();
     body.classList.remove('is-picking');
-    setTimeout(() => { $('picker-host').hidden = true; $('picker-body').textContent = ''; }, 280);
+    setTimeout(() => {
+      $('picker-host').hidden = true;
+      $('picker-body').textContent = '';
+      $('picker-body').classList.remove('is-entering');
+      const sheet = $('picker');
+      sheet.style.transform = '';
+      sheet.style.opacity = '';
+      sheet.style.transition = '';
+      $('picker-scrim').style.opacity = '';
+      $('picker-host').style.top = '';
+      $('picker-host').style.bottom = '';
+    }, 300);
   },
 
   tile(label, art, onPick) {
@@ -1426,7 +1664,7 @@ const Picker = {
       node.classList.add('is-added');
       const check = document.createElement('span');
       check.className = 'pick-check';
-      check.innerHTML = '<svg aria-hidden="true"><use href="#i-check"/></svg>';
+      check.innerHTML = CHECK_SVG;
       art.append(check);
       Haptics.tap(10);
       onPick();
@@ -1454,37 +1692,82 @@ const Picker = {
     return this.tile(t(entry.label), art, () => restoreDeckItem(entry));
   },
 
-  note(key) {
+  /** Un texto en lugar de la cuadricula. `keepSize` deja la hoja como esta:
+      buscando, que encoja y crezca con cada letra mueve el campo bajo el
+      dedo. */
+  note(key, keepSize) {
     this.tiles = [];
-    $('picker-body').closest('.picker').classList.add('is-compact');
-    $('picker-body').style.height = '120px';
-    $('picker-body').innerHTML = '';
-    $('picker-body').append(emptyNote(key));
+    const host = $('picker-body');
+    host.innerHTML = '';
+    if (!keepSize) {
+      host.closest('.picker').classList.add('is-compact');
+      host.style.height = '120px';
+    }
+    host.append(emptyNote(key));
     $('picker-dots').textContent = '';
   },
 
+  skeleton() {
+    const { per } = this.measure();
+    this.tiles = Array.from({ length: per }, () => {
+      const node = document.createElement('span');
+      node.className = 'pick is-skeleton';
+      node.setAttribute('aria-hidden', 'true');
+      node.innerHTML = '<span class="pick-art"></span><span class="pick-name"></span>';
+      return node;
+    });
+    this.page = 0;
+    this.layout();
+  },
+
   fill(tiles, emptyKey) {
-    if (!tiles.length) return this.note(emptyKey);
+    this.all = tiles;
+    if (!tiles.length) {
+      if (this.mode === 'apps') $('picker-search-box').hidden = true;
+      return this.note(emptyKey);
+    }
+    this.tiles = tiles;
+    this.page = 0;
+    this.layout();
+    // Entrada escalonada, en orden de lectura (Animated List / Blur Fade de
+    // Magic UI). Solo al llenarse: pasar de pagina ya tiene su movimiento.
+    replay($('picker-body'), 'is-entering', 1000);
+  },
+
+  /** Filtra mientras se escribe. Primero lo que EMPIEZA por lo escrito y
+      luego lo que lo contiene, que es lo que se espera de un buscador de
+      apps: "mu" tiene que dar Música antes que Spotify Premium Music. */
+  filter(query) {
+    $('picker-search-box').classList.toggle('has-text', !!query);
+    if (!this.all.length) return;
+    const needle = fold(query);
+    let tiles = this.all;
+    if (needle) {
+      const named = this.all.map((tile) => [tile, fold(tile.getAttribute('aria-label'))]);
+      tiles = named.filter(([, name]) => name.startsWith(needle)).map(([tile]) => tile)
+        .concat(named.filter(([, name]) => !name.startsWith(needle) && name.includes(needle)).map(([tile]) => tile));
+    }
+    if (!tiles.length) return this.note('add.apps.nomatch', true);
     this.tiles = tiles;
     this.page = 0;
     this.layout();
   },
 
-  /** Cuantas caben: la celda es fija (icono + nombre) y la pagina sale del
-      hueco real de la hoja. */
-  layout() {
-    if (!this.tiles.length || $('picker-host').hidden) return;
+  /** Cuantas caben, con la hoja a tope de alto. */
+  measure() {
     const host = $('picker-body');
-    // Se mide con la hoja a tope de alto y, si todo cabe en una pagina, se
-    // recoge a lo que ocupa: una hoja alta con dos iconos arriba es un hueco.
     host.closest('.picker').classList.remove('is-compact');
     host.style.height = '';
-    const gap = 8;
-    const cellW = 76;
-    const cellH = 94;
-    const cols = Math.max(2, Math.floor((host.clientWidth + gap) / (cellW + gap)));
-    const rows = Math.max(1, Math.floor((host.clientHeight + gap) / (cellH + gap)));
-    const per = cols * rows;
+    const cols = Math.max(2, Math.floor((host.clientWidth + PICK.gap) / (PICK.w + PICK.gap)));
+    const rows = Math.max(1, Math.floor((host.clientHeight + PICK.gap) / (PICK.h + PICK.gap)));
+    return { host, cols, rows, per: cols * rows };
+  },
+
+  /** Monta las paginas. La celda es fija (icono + nombre) y la pagina sale
+      del hueco real de la hoja. */
+  layout() {
+    if (!this.tiles.length || $('picker-host').hidden) return;
+    const { host, cols, rows, per } = this.measure();
     const count = Math.ceil(this.tiles.length / per);
     host.textContent = '';
     for (let i = 0; i < count; i += 1) {
@@ -1492,13 +1775,19 @@ const Picker = {
       page.className = 'pick-page';
       page.style.setProperty('--cols', String(cols));
       page.style.setProperty('--rows', String(rows));
-      for (const tile of this.tiles.slice(i * per, (i + 1) * per)) page.append(tile);
+      this.tiles.slice(i * per, (i + 1) * per).forEach((tile, n) => {
+        tile.style.setProperty('--i', String(n));
+        page.append(tile);
+      });
       host.append(page);
     }
-    if (count === 1) {
+    // Con los mandos, si todo cabe en una pagina, la hoja se recoge a lo que
+    // ocupa: una hoja alta con dos iconos arriba es un hueco. Con las apps
+    // no: la hoja tiene que quedarse quieta mientras se escribe.
+    if (count === 1 && this.mode !== 'apps') {
       const used = Math.ceil(this.tiles.length / cols);
       host.closest('.picker').classList.add('is-compact');
-      host.style.height = (used * cellH + (used - 1) * gap) + 'px';
+      host.style.height = (used * PICK.h + (used - 1) * PICK.gap) + 'px';
     }
     this.go(Math.min(this.page, count - 1));
   },
@@ -1527,6 +1816,97 @@ const Picker = {
 };
 
 $('chrome-add').addEventListener('click', () => Picker.open(body.dataset.screen === 'apps' ? 'apps' : 'deck'));
+
+$('picker-search').addEventListener('input', (event) => Picker.filter(event.target.value));
+$('picker-search').addEventListener('keydown', (event) => {
+  // Escape borra lo escrito antes de cerrar nada (el SearchField de React
+  // Aria); Intro guarda el teclado para ver la cuadricula entera.
+  if (event.key === 'Escape' && event.target.value) {
+    event.stopPropagation();
+    event.target.value = '';
+    Picker.filter('');
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    event.target.blur();
+  }
+});
+$('picker-clear').addEventListener('click', () => {
+  $('picker-search').value = '';
+  Picker.filter('');
+  $('picker-search').focus();
+});
+
+/* El teclado del movil se come media pantalla. La hoja se mide contra lo que
+   queda visible, asi que la cuadricula pierde filas en vez de esconderse
+   debajo de las teclas. */
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', () => {
+    const host = $('picker-host');
+    if (host.hidden) return;
+    const view = visualViewport;
+    host.style.top = Math.max(0, view.offsetTop) + 'px';
+    host.style.bottom = Math.max(0, innerHeight - view.height - view.offsetTop) + 'px';
+    Picker.layout();
+  });
+}
+
+/* Cerrar arrastrando, como una hoja de iOS (el Drawer de shadcn/Vaul). Se
+   coge por la cabecera o el asa; hacia abajo sigue al dedo y apaga el velo,
+   hacia arriba se resiste. Se cierra si se ha bajado bastante o se ha
+   soltado con impulso; si no, vuelve con muelle. */
+const SheetDrag = {
+  DISMISS: 110,
+  FLICK: 0.55,
+  drag: null,
+
+  start(event) {
+    if (!event.target.closest('.picker-head, .sheet-grabber') || event.target.closest('button, input')) return;
+    const sheet = $('picker');
+    this.drag = { y: event.clientY, t: performance.now(), dy: 0, v: 0, past: false };
+    try { sheet.setPointerCapture(event.pointerId); } catch { /* sin captura */ }
+    sheet.classList.add('is-dragging');
+  },
+
+  move(event) {
+    const drag = this.drag;
+    if (!drag) return;
+    const dy = event.clientY - drag.y;
+    const now = performance.now();
+    drag.v = (dy - drag.dy) / Math.max(1, now - drag.t);
+    drag.t = now;
+    drag.dy = dy;
+    const shown = dy > 0 ? dy : -Math.sqrt(-dy) * 2.2;
+    $('picker').style.transform = 'translate3d(0, ' + shown + 'px, 0)';
+    $('picker-scrim').style.opacity = String(Math.max(0.2, 1 - Math.max(0, dy) / 420));
+    const past = dy > this.DISMISS;
+    if (past !== drag.past) { drag.past = past; Haptics.tap(8); }
+  },
+
+  end() {
+    const drag = this.drag;
+    if (!drag) return;
+    this.drag = null;
+    const sheet = $('picker');
+    sheet.classList.remove('is-dragging');
+    if (drag.dy > this.DISMISS || (drag.v > this.FLICK && drag.dy > 24)) {
+      sheet.style.transition = 'transform 320ms var(--ease), opacity 240ms var(--micro)';
+      sheet.style.transform = 'translate3d(0, ' + (drag.dy + 280) + 'px, 0)';
+      sheet.style.opacity = '0';
+      $('picker-scrim').style.opacity = '';
+      Picker.close();
+      return;
+    }
+    sheet.style.transition = 'transform 460ms var(--spring)';
+    sheet.style.transform = '';
+    $('picker-scrim').style.opacity = '';
+    setTimeout(() => { if (!this.drag) sheet.style.transition = ''; }, 480);
+  },
+};
+
+$('picker').addEventListener('pointerdown', (event) => SheetDrag.start(event));
+$('picker').addEventListener('pointermove', (event) => SheetDrag.move(event));
+$('picker').addEventListener('pointerup', () => SheetDrag.end());
+$('picker').addEventListener('pointercancel', () => SheetDrag.end());
 
 /* --- El "−": quitar del panel -------------------------------------------
    Nada de quitar de un toque: un globo pequeno en la esquina de cada icono
@@ -1911,10 +2291,13 @@ $('screens').addEventListener('pointerdown', (event) => {
   }
 
   if (!hit) return;
+  // La pieza se hunde mientras se mantiene: dice que algo va a pasar.
+  hit.item.classList.add('is-holding');
   Arrange.hold = {
     x: event.clientX, y: event.clientY, item: hit.item, armed: false,
     timer: setTimeout(() => {
       const hold = Arrange.hold;
+      hit.item.classList.remove('is-holding');
       if (!hold || Object.values(sliders).some((slider) => slider.dragging)) return;
       Arrange.start(hit.name);
       Arrange.swallowClick = true;
@@ -1934,13 +2317,17 @@ addEventListener('pointermove', (event) => {
     Arrange.move(event);
   } else if (!hold.armed && far > HOLD_SLOP) {
     clearTimeout(hold.timer);
+    hold.item.classList.remove('is-holding');
     Arrange.hold = null;
   }
 });
 
 for (const name of ['pointerup', 'pointercancel']) {
   addEventListener(name, () => {
-    if (Arrange.hold) clearTimeout(Arrange.hold.timer);
+    if (Arrange.hold) {
+      clearTimeout(Arrange.hold.timer);
+      Arrange.hold.item.classList.remove('is-holding');
+    }
     Arrange.hold = null;
     if (Arrange.drag) Arrange.drop();
   });
@@ -2442,12 +2829,134 @@ function relayout() {
     placeDeck(true);
     placeApps(true);
     placeSettings(true);
+    if (!Dock.scrub) Dock.place(Dock.active(), false);
   });
 }
 
 addEventListener('resize', relayout);
 addEventListener('orientationchange', relayout);
 addEventListener('load', relayout);
+
+/* --- La lente del dock -------------------------------------------------
+   Una sola pieza que viaja a la pestana elegida (el SelectionIndicator de
+   React Aria y el FloatingIndicator de Mantine, con el estiron de la barra
+   de Liquid Glass). Se mide con `offsetLeft/Top`, que no cambian con las
+   transformaciones, asi que sirve igual con el dock abajo o a la izquierda.
+
+   Ademas se puede arrastrar: con el dedo puesto en el dock, la lente lo
+   sigue de pestana en pestana y al soltar se va a la que este debajo, como
+   en la barra de pestanas de iOS 26. */
+
+const Dock = {
+  lens: $('dock-lens'),
+  current: null,
+  scrub: null,
+  swallow: false,
+
+  active() { return document.querySelector('.tab.is-active'); },
+
+  tabs() { return [...document.querySelectorAll('.tab:not([hidden])')]; },
+
+  /** `moving` anima el viaje; sin el, la lente aparece donde tiene que estar
+      (al girar el movil o al ocultarse una pestana). */
+  place(tab, moving) {
+    const lens = this.lens;
+    if (!tab || tab.hidden || !tab.offsetWidth) return;
+    const from = this.current;
+    // `render` pasa por aqui con cada aviso del Mac. Si nada se ha movido no
+    // se toca: recolocar sin animar cortaria el viaje que este en curso.
+    const geo = [tab.offsetWidth, tab.offsetHeight, tab.offsetLeft, tab.offsetTop].join('/');
+    if (!moving && tab === from && geo === this.geo) return;
+    this.geo = geo;
+    if (!moving) lens.style.transition = 'none';
+    lens.style.width = tab.offsetWidth + 'px';
+    lens.style.height = tab.offsetHeight + 'px';
+    lens.style.translate = tab.offsetLeft + 'px ' + tab.offsetTop + 'px';
+    if (!moving) { void lens.offsetWidth; lens.style.transition = ''; }
+    if (moving && from && from !== tab && lens.classList.contains('is-placed')) {
+      lens.classList.remove('is-moving-x', 'is-moving-y');
+      replay(lens, from.offsetTop !== tab.offsetTop ? 'is-moving-y' : 'is-moving-x', 520);
+    }
+    this.current = tab;
+    if (!lens.classList.contains('is-placed')) requestAnimationFrame(() => lens.classList.add('is-placed'));
+  },
+
+  /** La pestana bajo el dedo, por geometria: el dedo puede haberse salido un
+      poco del dock y tiene que seguir contando la mas cercana. */
+  tabAt(x, y) {
+    let best = null;
+    let distance = Infinity;
+    for (const tab of this.tabs()) {
+      const box = tab.getBoundingClientRect();
+      const d = Math.hypot(x - (box.left + box.width / 2), y - (box.top + box.height / 2));
+      if (d < distance) { distance = d; best = tab; }
+    }
+    return best;
+  },
+};
+
+$('dock').addEventListener('pointerdown', (event) => {
+  const tab = event.target.closest('.tab');
+  if (!tab || !event.isPrimary) return;
+  Dock.scrub = { id: event.pointerId, start: tab, over: tab, x: event.clientX, y: event.clientY, moved: false };
+});
+
+$('dock').addEventListener('pointermove', (event) => {
+  const scrub = Dock.scrub;
+  if (!scrub || event.pointerId !== scrub.id) return;
+  if (!scrub.moved) {
+    if (Math.hypot(event.clientX - scrub.x, event.clientY - scrub.y) < 10) return;
+    scrub.moved = true;
+    // La captura se pide aqui y no al bajar el dedo: con ella puesta, un toque
+    // normal ya no le llegaria a la pestana como `click`.
+    try { $('dock').setPointerCapture(event.pointerId); } catch { /* sin captura */ }
+    $('dock').classList.add('is-scrubbing');
+    if (pressed.has(scrub.start)) release(scrub.start);
+    Dock.place(scrub.over, true);
+  }
+  const tab = Dock.tabAt(event.clientX, event.clientY);
+  if (tab && tab !== scrub.over) {
+    scrub.over = tab;
+    Dock.place(tab, true);
+    Haptics.tap(6);
+  }
+});
+
+function endDockScrub(event, commit) {
+  const scrub = Dock.scrub;
+  if (!scrub || event.pointerId !== scrub.id) return;
+  Dock.scrub = null;
+  if (!scrub.moved) return;
+  $('dock').classList.remove('is-scrubbing');
+  // El `click` que pueda venir detras es del gesto, no un toque nuevo.
+  Dock.swallow = true;
+  setTimeout(() => { Dock.swallow = false; }, 400);
+  if (commit && scrub.over !== Dock.active()) show(scrub.over.dataset.screen);
+  else Dock.place(Dock.active(), true);
+}
+
+$('dock').addEventListener('pointerup', (event) => endDockScrub(event, true));
+$('dock').addEventListener('pointercancel', (event) => endDockScrub(event, false));
+$('dock').addEventListener('click', (event) => {
+  if (!Dock.swallow) return;
+  Dock.swallow = false;
+  event.stopPropagation();
+  event.preventDefault();
+}, { capture: true });
+
+// Flechas entre pestanas, como las Tabs de React Aria: el foco y la
+// pantalla van juntos.
+$('dock').addEventListener('keydown', (event) => {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+  if (!step) return;
+  const tabs = Dock.tabs();
+  const at = tabs.indexOf(document.activeElement.closest('.tab'));
+  const next = tabs[(Math.max(0, at) + step + tabs.length) % tabs.length];
+  if (!next) return;
+  event.preventDefault();
+  next.focus();
+  show(next.dataset.screen);
+});
 
 /* --- Navegacion -------------------------------------------------------- */
 
@@ -2470,6 +2979,7 @@ function show(name, options) {
     other.classList.toggle('is-active', active);
     other.setAttribute('aria-current', active ? 'page' : 'false');
   });
+  Dock.place(tab, true);
   document.querySelectorAll('.screen').forEach((screen) => {
     screen.classList.toggle('is-active', screen.dataset.screen === name);
   });
@@ -2631,7 +3141,40 @@ function fire(target) {
     scrub.paint();
   }
 
-  send(action, target.dataset.value === undefined ? undefined : Number(target.dataset.value) || target.dataset.value);
+  // Los atajos de teclado necesitan Accesibilidad en el Mac. Sin ella el Mac
+  // contesta que si y no pasa nada: mejor decirlo que dejar un boton mudo.
+  if (action.startsWith('shortcut.') && state.accessibility === false) {
+    Island.show({ text: t('island.access'), icon: 'warning', tone: 'warn', ms: 3000 });
+  }
+
+  const value = target.dataset.value === undefined ? undefined : Number(target.dataset.value) || target.dataset.value;
+  send(action, value).then((ok) => { if (ok) confirmOnIsland(action, value); });
+}
+
+/** Lo que pasa en el Mac y no se ve desde el movil. Lo demas (volumen,
+    silencio, apariencia, lo que suena) ya se ve en el propio boton. */
+const ISLAND_FOR = {
+  'system.lock': ['island.lock', 'lock'],
+  'display.sleep': ['island.display', 'display-off'],
+  'system.sleep': ['island.sleep', 'zzz'],
+  'system.restart': ['island.restart', 'restart'],
+  'system.shutdown': ['island.shutdown', 'power'],
+  'shortcut.screenshot': ['island.screenshot', 'camera'],
+};
+
+function confirmOnIsland(action, value) {
+  if (action === 'app.open') {
+    const app = (state.apps || []).find((entry) => entry.path === value);
+    if (!app) return;
+    Island.show({
+      text: t('island.opening') + ' ' + app.name,
+      image: url('/api/appicon?p=' + encodeURIComponent(app.path)),
+    });
+    return;
+  }
+  if (action.startsWith('shortcut.') && state.accessibility === false) return;
+  const known = ISLAND_FOR[action];
+  if (known) Island.show({ text: t(known[0]), icon: known[1] });
 }
 
 /* --- Reloj y ciclo de vida -------------------------------------------- */

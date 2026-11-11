@@ -520,8 +520,12 @@ body[data-flow="prev"] .screen:not(.is-active) { transform: translate3d(4%, 0, 0
   border-radius: var(--r-pill);
   overflow: hidden;
   touch-action: none;
-  transition: transform 260ms var(--spring);
+  /* `scale` va aparte de `transform`: es el estiron elastico del borde (ver
+     `Slider.stretch`) y vuelve con muelle sin pisar el hundimiento. */
+  transition: transform 260ms var(--spring), scale 520ms var(--spring);
 }
+
+.slider.is-dragging { transition: transform 260ms var(--spring), scale 90ms linear; }
 
 /* El nivel, DELGADO. Una pastilla tan ancha como un circulo se lee como un
    bloque, no como un control de nivel: la de Centro de Control es
@@ -849,8 +853,10 @@ body[data-flow="prev"] .screen:not(.is-active) { transform: translate3d(4%, 0, 0
   border-radius: var(--r-pill);
   background: var(--track);
   overflow: hidden;
-  transition: height 220ms var(--spring);
+  transition: height 220ms var(--spring), scale 520ms var(--spring);
 }
+
+.scrub.is-dragging .scrub-track { transition: height 220ms var(--spring), scale 90ms linear; }
 
 .scrub-fill {
   height: 100%;
@@ -1079,11 +1085,16 @@ body[data-flow="prev"] .screen:not(.is-active) { transform: translate3d(4%, 0, 0
   border-radius: 50%;
   background: #FFF;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  transition: transform 280ms var(--spring);
+  transition: transform 280ms var(--spring), width 240ms var(--spring);
 }
 
 .switch.is-on { background: var(--green); }
 .switch.is-on::before { transform: translateX(20px); }
+
+/* Apretado, el pomo se ensancha hacia el lado al que va, como el de iOS: se
+   nota que lo tienes cogido antes de soltar. */
+.switch.is-held::before { width: 33px; }
+.switch.is-on.is-held::before { transform: translateX(14px); }
 
 /* --- Segmentado -------------------------------------------------------- */
 
@@ -1103,8 +1114,11 @@ body[data-flow="prev"] .screen:not(.is-active) { transform: translate3d(4%, 0, 0
   left: 2px;
   border-radius: var(--r-pill);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  transition: transform 320ms var(--spring), width 320ms var(--spring);
+  transition: transform 320ms var(--spring), width 320ms var(--spring), scale 240ms var(--spring);
 }
+
+.segment:has(.segment-option.is-on.is-held) .segment-thumb { scale: 0.94; }
+.segment-option.is-held:not(.is-on) { opacity: 0.6; }
 
 body[data-theme="dark"] .segment-thumb { background: #636366; }
 body[data-theme="light"] .segment-thumb { background: #FFF; }
@@ -1149,7 +1163,8 @@ body[data-theme="light"] .segment-thumb { background: #FFF; }
 }
 
 .tab svg { width: 23px; height: 23px; transition: transform 300ms var(--spring); }
-.tab.is-active { color: var(--label); background: var(--pane-press); }
+.tab { position: relative; z-index: 1; }
+.tab.is-active { color: var(--label); }
 .tab.is-active svg { transform: scale(1.04); }
 .tab.is-press { transform: scale(0.9); }
 .tab[hidden] { display: none; }
@@ -1563,6 +1578,268 @@ body[data-arranging] .chrome-done { display: block; }
   .tab { min-height: 42px; }
   .tab svg { width: 21px; height: 21px; }
   .player { max-width: none; }
+}
+
+/* --- La lente del dock ------------------------------------------------
+   Una sola pieza de cristal que se desliza a la pestana elegida. Mientras
+   viaja se estira en el sentido del movimiento y se recoge al llegar, que
+   es lo que hace la barra de pestanas de Liquid Glass. Con el dedo encima
+   del dock se puede arrastrar de una pestana a otra (ver `Dock`). */
+
+.dock { touch-action: none; }
+
+.dock-lens {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: var(--r-pill);
+  background: var(--pane-press);
+  box-shadow: inset 0 0.5px 0 var(--pane-top), inset 0 0 0 0.5px var(--pane-rim);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    translate 480ms var(--spring),
+    width 480ms var(--spring),
+    height 480ms var(--spring),
+    scale 300ms var(--spring),
+    opacity 200ms var(--micro);
+}
+
+/* Hasta la primera medida no hay viaje que ensenar: aparece en su sitio. */
+.dock-lens:not(.is-placed) { transition: opacity 200ms var(--micro); }
+.dock-lens.is-placed { opacity: 1; }
+.dock-lens.is-moving-x { animation: lens-x 480ms var(--ease); }
+.dock-lens.is-moving-y { animation: lens-y 480ms var(--ease); }
+
+@keyframes lens-x { 38% { scale: 1.16 0.86; } }
+@keyframes lens-y { 38% { scale: 0.86 1.16; } }
+
+/* Cogida con el dedo, la lente se levanta un poco y va mas suelta. */
+.dock.is-scrubbing .dock-lens {
+  scale: 1.1;
+  background: var(--pane-bg);
+  box-shadow: inset 0 1px 0 var(--pane-top), inset 0 0 0 0.5px var(--pane-rim), 0 8px 20px -8px rgba(0, 0, 0, 0.45);
+  transition-duration: 240ms, 240ms, 240ms, 300ms, 200ms;
+}
+
+/* --- Isla ---------------------------------------------------------------
+   El acuse de lo que pasa en el Mac y no se ve desde el movil. Nace de una
+   pastilla pequena arriba del todo y se abre con muelle, como la isla
+   dinamica; se recoge sola. Encima del cromo a proposito: dura dos segundos
+   y es justo ahi donde se mira. */
+
+.island {
+  position: fixed;
+  z-index: 50;
+  top: max(env(safe-area-inset-top), 12px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+  min-height: 38px;
+  padding: 5px 16px 5px 6px;
+  border-radius: var(--r-pill);
+  opacity: 0;
+  transform: translate3d(-50%, -8px, 0) scale(0.55, 0.7);
+  filter: blur(5px);
+  pointer-events: none;
+  transition: transform 300ms var(--ease), opacity 200ms var(--micro), filter 260ms var(--micro);
+}
+
+.island[hidden] { display: none; }
+.island.is-on {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0);
+  filter: none;
+  transition: transform 560ms var(--spring), opacity 180ms var(--micro), filter 320ms var(--micro);
+}
+
+.island-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--label);
+}
+
+.island-art:empty { display: none; }
+.island-art svg { width: 15px; height: 15px; }
+.island-art img { width: 28px; height: 28px; object-fit: contain; }
+.island-art.is-app { background: none; border-radius: 7px; }
+.island.is-warn .island-art { background: var(--red); color: #FFF; }
+.island.is-good .island-art { background: var(--green); color: #FFF; }
+.island.is-warn .island-art svg { width: 14px; height: 14px; }
+
+.island-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 590;
+  letter-spacing: -0.012em;
+}
+
+.island-art:empty + .island-text { padding-left: 10px; }
+
+/* Un aviso nuevo con la isla ya abierta no la cierra y la reabre: cambia el
+   contenido dentro, con un fundido corto. */
+.island.is-swapping .island-art,
+.island.is-swapping .island-text { animation: island-swap 320ms var(--ease); }
+
+@keyframes island-swap { from { opacity: 0; filter: blur(4px); transform: scale(0.92); } }
+
+/* --- Hoja: asa y busqueda ---------------------------------------------- */
+
+.sheet-grabber {
+  flex: none;
+  width: 36px;
+  height: 5px;
+  margin: -8px auto 10px;
+  border-radius: 3px;
+  background: var(--label-3);
+  opacity: 0.7;
+}
+
+/* La cabecera es el sitio por donde se coge la hoja. */
+.picker-head { touch-action: none; }
+.picker.is-dragging { transition: none; }
+
+.search {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  margin: 0 4px 14px;
+  padding: 0 6px 0 11px;
+  border-radius: 12px;
+  background: var(--track);
+  color: var(--label-3);
+  transition: box-shadow 200ms var(--micro);
+}
+
+.search[hidden] { display: none; }
+.search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 34%, transparent); }
+.search-glyph { flex: none; width: 17px; height: 17px; }
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--label);
+  /* 16 px y no menos: por debajo, Safari amplia la pagina al enfocar. */
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: -0.012em;
+  caret-color: var(--blue);
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.search-input:focus-visible { outline: none; }
+.search-input::placeholder { color: var(--label-3); }
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+
+.search-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--label-3);
+  opacity: 0;
+  scale: 0.6;
+  pointer-events: none;
+  transition: opacity 160ms var(--micro), scale 260ms var(--spring);
+}
+
+.search-clear svg { width: 17px; height: 17px; }
+.search.has-text .search-clear { opacity: 1; scale: 1; pointer-events: auto; }
+
+/* --- Selector: esqueleto, entrada y marca ------------------------------
+   Mientras el Mac busca sus apps, la cuadricula ya esta en su sitio con las
+   piezas en gris y un brillo que la recorre. Antes era una hoja pequena con
+   un texto que, al llegar las apps, pegaba un salto al tamano de verdad. */
+
+.pick.is-skeleton { pointer-events: none; }
+
+.pick.is-skeleton .pick-art,
+.pick.is-skeleton .pick-name {
+  background-color: var(--track);
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.13) 50%, transparent 70%);
+  background-size: 260% 100%;
+  animation: shimmer 1.5s var(--micro) infinite;
+}
+
+body[data-theme="light"] .pick.is-skeleton .pick-art,
+body[data-theme="light"] .pick.is-skeleton .pick-name {
+  background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+}
+
+.pick.is-skeleton .pick-name { width: 64%; height: 9px; margin-top: 5px; border-radius: 5px; }
+
+@keyframes shimmer {
+  from { background-position: 130% 0; }
+  to   { background-position: -130% 0; }
+}
+
+/* Al llegar, las piezas entran escalonadas y desde un poco de desenfoque,
+   en el orden de lectura. Solo al llenarse, no al pasar de pagina. */
+.picker-body.is-entering .pick-page.is-current .pick {
+  animation: pick-in 460ms var(--ease) backwards;
+  animation-delay: calc(min(var(--i, 0), 24) * 14ms);
+}
+
+@keyframes pick-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.9); filter: blur(4px); }
+}
+
+.pick-check { animation: check-pop 460ms var(--spring) both; }
+.pick-check path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: check-draw 300ms var(--ease) 110ms forwards; }
+
+@keyframes check-pop { from { transform: scale(0.3); opacity: 0; } }
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+
+/* --- Cambio de pista ---------------------------------------------------
+   Cuando cambia lo que suena, el titulo y la portada nuevos no sustituyen a
+   los viejos de golpe: entran desde un desenfoque corto. */
+
+.player-meta.is-swapping { animation: meta-in 520ms var(--ease); }
+.player-art.is-swapping .player-art-img { animation: art-in 600ms var(--ease); }
+
+@keyframes meta-in { from { opacity: 0; filter: blur(8px); transform: translate3d(0, 6px, 0); } }
+@keyframes art-in { from { opacity: 0; filter: blur(12px); transform: scale(0.94); } }
+
+/* --- Mantener pulsado --------------------------------------------------
+   Lo que lleva a ordenar es mantener el dedo medio segundo, y antes ese
+   medio segundo era mudo: no habia forma de saber que algo iba a pasar. Ahora
+   la pieza se hunde poco a poco hasta que salta. Empieza tarde a proposito,
+   para que un toque normal no la mueva. */
+
+@keyframes hold-sink { to { scale: 0.93; } }
+.page--grid > .is-holding { animation: hold-sink 360ms cubic-bezier(0.3, 0, 0.5, 1) 120ms both; }
+
+/* --- Cambio de tema ----------------------------------------------------
+   Con View Transitions el tema nuevo entra fundido sobre el viejo en vez de
+   cambiar de golpe. Donde no existe, el corte de siempre (`reskin`). */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* --- Accesibilidad y preferencias -------------------------------------- */

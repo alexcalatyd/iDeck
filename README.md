@@ -114,6 +114,12 @@ away.
 | **Playing** | Artwork, title, a progress bar you can drag, transport and a volume pill. Previous/next for Spotify and Music, ±10 s for a video in the browser. |
 | **Settings** | Theme, material (glass, subtle, flat), language, animations and the connection status. |
 
+What happens on the Mac but can't be seen from the phone — locking it,
+turning the display off, opening an app, losing the connection — is
+confirmed in a small **island** at the top that closes by itself. The dock
+has a glass lens that slides to the current tab; drag your finger along the
+dock to move between screens without lifting it.
+
 <p align="center">
   <img src="docs/screenshot-landscape-now-playing.png" alt="The Playing screen in landscape" width="85%">
 </p>
@@ -123,9 +129,9 @@ away.
 Controls and Apps both carry a small **+** to the left of the title and a
 **−** to the right.
 
-- **+** opens a picker. On Apps it lists every app installed on the Mac; on
-  Controls, the buttons you've removed. Tap as many as you like, then
-  **Done**.
+- **+** opens a picker. On Apps it lists every app installed on the Mac,
+  with a search field on top; on Controls, the buttons you've removed. Tap
+  as many as you like, then **Done**, or drag the sheet down to close it.
 - **−** first explains how it works, then puts a glass **−** badge on every
   icon. Tap the ones you want gone (the badge turns red) and they're removed
   together when you tap **Done**. **Cancel** removes nothing. Selecting
